@@ -88,6 +88,25 @@ app.get('/users',verifyJWT, verifyAdmin, async(req, res) =>{
         res.send(result)
     })
 
+
+    app.get("/ourClasses", async (req, res) => {
+      const result = await classCollection
+        .find({ status: 'approve' })
+        .toArray();
+      res.send(result);
+    });
+
+
+    app.get("/ourInstructor", async (req, res) => {
+      const result = await usersCollection
+        .find({ role: 'instructor' })
+        .toArray();
+      res.send(result);
+    });
+    
+
+
+
     //admin api
     app.patch('/users/admin/:id', async(req, res) =>{
       const id = req.params.id
