@@ -47,7 +47,7 @@ async function run() {
     await client.connect();
   
     const usersCollection = client.db("picStudio").collection("users")
-   
+   const classCollection = client.db("picStudio").collection("classes")
     //jwt
     app.post('/jwt', (req, res) =>{
       const user = req.body;
@@ -61,8 +61,13 @@ async function run() {
       const email = req.decoded.email;
       const query = { email: email }
       const user = await usersCollection.findOne(query);
-      if (user?.role !== 'admin') {
-        return res.status(403).send({ error: true, message: 'forbidden message' });
+      if (
+        user?.role !== 'admin' &&
+        user?.role !== 'instructor' &&
+        user?.role !== 'student' 
+      
+      ) {
+        return res.status(403).send({ error: false, message: 'forbidden message' });
       }
       next();
     }
@@ -101,19 +106,47 @@ app.get('/users',verifyJWT, verifyAdmin, async(req, res) =>{
 
 
     
-    //check admin
-    app.get('/users/admin/:email', verifyJWT, async (req, res) => {
+    // check admin
+
+    // app.get('/users/admin/:email', verifyJWT,  async (req, res) => {
+    //   const email = req.params.email;
+
+    //   if (req.decoded.email !== email) {
+    //     res.send({ admin: false })
+    //   } 
+
+    //   const query = { email: email }
+    //   const user = await usersCollection.findOne(query);
+    //   const result = { admin: user?.role === 'admin' }
+    //   res.send(result);
+    // })
+
+
+
+//role 
+
+    app.get("/users/role/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
-
-      if (req.decoded.email !== email) {
-        res.send({ admin: false })
-      }
-
-      const query = { email: email }
+      const query = { email: email };
       const user = await usersCollection.findOne(query);
-      const result = { admin: user?.role === 'admin' }
-      res.send(result);
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      let role;
+      if (user.role === "admin") {
+        role = "admin";
+      } 
+      else if (user.role === "instructor") {
+role = "instructor";
+      } 
+     
+      else {
+        role = "student";
+      }
+    res.send({email: email, role: role})
     })
+
 
 
 
@@ -131,6 +164,9 @@ app.get('/users',verifyJWT, verifyAdmin, async(req, res) =>{
   res.send(result)
 })
    
+
+
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
