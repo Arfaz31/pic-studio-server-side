@@ -173,7 +173,12 @@ role = "instructor";
     res.send(result);
  })
 
- 
+     //get all instructor class
+     app.get('/allClasses', async (req, res)=>{
+      const result= await classCollection.find().toArray()
+      res.send(result)
+   })
+
 
 
     // Send a ping to confirm a successful connection
