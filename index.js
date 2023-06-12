@@ -166,6 +166,14 @@ role = "instructor";
    
 
 
+   //add a class
+   app.post('/classes', async(req, res)=>{
+    const addClass = req.body;
+    const result = await classCollection.insertOne(addClass)
+    res.send(result);
+ })
+
+ 
 
 
     // Send a ping to confirm a successful connection
