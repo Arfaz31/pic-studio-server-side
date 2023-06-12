@@ -62,12 +62,9 @@ async function run() {
       const query = { email: email }
       const user = await usersCollection.findOne(query);
       if (
-        user?.role !== 'admin' &&
-        user?.role !== 'instructor' &&
-        user?.role !== 'student' 
-      
+        user?.role !== 'admin'
       ) {
-        return res.status(403).send({ error: false, message: 'forbidden message' });
+        return res.status(403).send({ error: true, message: 'forbidden message' });
       }
       next();
     }
@@ -130,9 +127,10 @@ app.get('/users',verifyJWT, verifyAdmin, async(req, res) =>{
       const query = { email: email };
       const user = await usersCollection.findOne(query);
 
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
+      if (req.decoded.email !== email) {
+        res.send({ admin: false })
+      } 
+  
       let role;
       if (user.role === "admin") {
         role = "admin";
@@ -149,6 +147,41 @@ role = "instructor";
 
 
 
+//admin approved class
+
+app.patch('/classes/approve/:id', async (req, res)=>{
+  const id =req.params.id;
+  const filter = {_id : new ObjectId(id)}
+  const updateDoc = {
+     $set:{
+       status: 'approve'
+     },
+  }
+  const result = await classCollection.updateOne(filter, updateDoc);
+  res.send(result)
+})
+
+//admin denied class
+app.patch('/classes/deny/:id', async (req, res)=>{
+  const id =req.params.id;
+  const filter = {_id : new ObjectId(id)}
+  const updateDoc = {
+     $set:{
+       status: 'deny'
+     },
+  }
+  const result = await classCollection.updateOne(filter, updateDoc);
+  res.send(result)
+})
+
+
+
+
+
+
+
+
+    
 
 
  //instructor api
