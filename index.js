@@ -48,6 +48,7 @@ async function run() {
   
     const usersCollection = client.db("picStudio").collection("users")
    const classCollection = client.db("picStudio").collection("classes")
+   const MySelectedClassCollection = client.db("picStudio").collection("selectedClass")
     //jwt
     app.post('/jwt', (req, res) =>{
       const user = req.body;
@@ -88,7 +89,7 @@ app.get('/users',verifyJWT, verifyAdmin, async(req, res) =>{
         res.send(result)
     })
 
-
+//classes
     app.get("/ourClasses", async (req, res) => {
       const result = await classCollection
         .find({ status: 'approve' })
@@ -96,7 +97,21 @@ app.get('/users',verifyJWT, verifyAdmin, async(req, res) =>{
       res.send(result);
     });
 
+    //selected class
+    app.post('/mySelectedClasses', async(req, res)=>{
+      const selectedClass = req.body;
+      const result = await MySelectedClassCollection.insertOne(selectedClass)
+      res.send(result)
+   })
 
+     //student dashboard
+     app.get('/mySelectedAllClasses', async(req, res)=>{
+      const result = await MySelectedClassCollection.find().toArray()
+      res.send(result)
+  })
+  
+
+//Instructor
     app.get("/ourInstructor", async (req, res) => {
       const result = await usersCollection
         .find({ role: 'instructor' })
