@@ -4,6 +4,7 @@ const cors = require('cors')
 const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
+const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
 const port = process.env.PORT || 5000
 
 //middleware
@@ -49,6 +50,10 @@ async function run() {
     const usersCollection = client.db("picStudio").collection("users")
    const classCollection = client.db("picStudio").collection("classes")
    const MySelectedClassCollection = client.db("picStudio").collection("selectedClass")
+   const paymentClassCollection = client.db("picStudio").collection("payment")
+
+
+
     //jwt
     app.post('/jwt', (req, res) =>{
       const user = req.body;
@@ -276,6 +281,30 @@ app.patch('/classes/deny/:id', async (req, res)=>{
       res.send(result)
    })
 
+
+
+   
+    //create payment
+    app.post('/create-payment-intent', verifyJWT, async (req, res)=>{
+      const {price} = req.body;
+      const amount = price*100;
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ['card']
+      })
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+  })
+
+  app.post('/payment', verifyJWT, async(req, res)=>{
+    const payment = req.body;
+    const insertedResult = await paymentClassCollection.insertOne(payment)
+    const query={_id: new ObjectId (payment.enrollItemId)}
+    const deletedResult = await MySelectedClassCollection.deleteOne(query)
+    res.send({insertedResult,  deletedResult})
+  })
 
 
     // Send a ping to confirm a successful connection
