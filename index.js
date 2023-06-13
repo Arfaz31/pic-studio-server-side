@@ -77,7 +77,7 @@ app.get('/users',verifyJWT, verifyAdmin, async(req, res) =>{
   res.send(result)
 })
 
-
+//social media login user data save only one time in database
     app.post('/users', async(req, res) =>{
         const user =req.body
         const query = {email: user.email}
@@ -97,12 +97,24 @@ app.get('/users',verifyJWT, verifyAdmin, async(req, res) =>{
       res.send(result);
     });
 
-    //selected class
-    app.post('/mySelectedClasses', async(req, res)=>{
-      const selectedClass = req.body;
-      const result = await MySelectedClassCollection.insertOne(selectedClass)
-      res.send(result)
-   })
+  //   //selected class
+  //   app.post('/mySelectedClasses', async(req, res)=>{
+  //     const selectedClass = req.body;
+  //     const result = await MySelectedClassCollection.insertOne(selectedClass)
+  //     res.send(result)
+  //  })
+
+   //class only select for one time
+  app.post("/mySelectedClasses", async (req, res) => {
+    const selectedClass = req.body;
+    const query ={classItemId: selectedClass.classItemId}
+    const existedId = await MySelectedClassCollection.findOne(query)
+    if(existedId){
+      return res.send({ message: "already exist" })
+    }
+    const result = await MySelectedClassCollection.insertOne(selectedClass);
+    res.send(result);
+  });
 
      //student dashboard
      app.get('/mySelectedAllClasses', async(req, res)=>{
@@ -110,6 +122,7 @@ app.get('/users',verifyJWT, verifyAdmin, async(req, res) =>{
       res.send(result)
   })
   
+
 
 //Instructor
     app.get("/ourInstructor", async (req, res) => {
@@ -119,7 +132,14 @@ app.get('/users',verifyJWT, verifyAdmin, async(req, res) =>{
       res.send(result);
     });
     
-
+    //popular instructor
+    app.get("/popularInstructor", async (req, res) => {
+      const result = await usersCollection
+        .find({ role: "instructor" })
+        .limit(6)
+        .toArray();
+      res.send(result);
+    });
 
 
     //admin api
