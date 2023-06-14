@@ -68,7 +68,9 @@ async function run() {
       const query = { email: email }
       const user = await usersCollection.findOne(query);
       if (
-        user?.role !== 'admin'
+        user?.role !== 'admin' && 
+        user?.role !== 'instructor' && 
+        user?.role !== 'student'
       ) {
         return res.status(403).send({ error: true, message: 'forbidden message' });
       }
@@ -102,12 +104,7 @@ app.get('/users',verifyJWT, verifyAdmin, async(req, res) =>{
       res.send(result);
     });
 
-  //   //selected class
-  //   app.post('/mySelectedClasses', async(req, res)=>{
-  //     const selectedClass = req.body;
-  //     const result = await MySelectedClassCollection.insertOne(selectedClass)
-  //     res.send(result)
-  //  })
+ 
 
    //class only select for one time
   app.post("/mySelectedClasses", async (req, res) => {
@@ -127,6 +124,13 @@ app.get('/users',verifyJWT, verifyAdmin, async(req, res) =>{
       res.send(result)
   })
   
+  //my toy delete
+  app.delete('/mySelectedAllClasses/:id', async(req, res) =>{
+    const id = req.params.id;
+    const query = {_id: new ObjectId(id)}
+    const result = await MySelectedClassCollection.deleteOne(query);
+    res.send(result)
+  })
 
 
 //Instructor
@@ -161,48 +165,53 @@ app.get('/users',verifyJWT, verifyAdmin, async(req, res) =>{
     })
 
 
+ //instructor api
+ app.patch('/users/instructor/:id', async(req, res) =>{
+  const id = req.params.id
+  const filter = {_id: new ObjectId(id)}
+  const updateDoc = {
+    $set: {
+      role: 'instructor'
+    },
+  }
+  const result = await usersCollection.updateOne(filter, updateDoc)
+  res.send(result)
+})
+   
+
+
+
     
     // check admin
 
-    // app.get('/users/admin/:email', verifyJWT,  async (req, res) => {
-    //   const email = req.params.email;
-
-    //   if (req.decoded.email !== email) {
-    //     res.send({ admin: false })
-    //   } 
-
-    //   const query = { email: email }
-    //   const user = await usersCollection.findOne(query);
-    //   const result = { admin: user?.role === 'admin' }
-    //   res.send(result);
-    // })
-
-
-
-//role 
-
-    app.get("/users/role/:email", verifyJWT, async (req, res) => {
+    app.get('/users/admin/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
-      const query = { email: email };
-      const user = await usersCollection.findOne(query);
 
       if (req.decoded.email !== email) {
         res.send({ admin: false })
-      } 
-  
-      let role;
-      if (user.role === "admin") {
-        role = "admin";
-      } 
-      else if (user.role === "instructor") {
-role = "instructor";
-      } 
-     
-      else {
-        role = "student";
       }
-    res.send({email: email, role: role})
+
+      const query = { email: email }
+      const user = await usersCollection.findOne(query);
+      const result = { admin: user?.role === 'admin' }
+      res.send(result);
     })
+
+
+    app.get('/users/instructor/:email', verifyJWT, async (req, res) => {
+      const email = req.params.email;
+
+      if (req.decoded.email !== email) {
+        res.send({ instructor: false })
+      }
+
+      const query = { email: email }
+      const user = await usersCollection.findOne(query);
+      const result = { instructor: user?.role === 'instructor' }
+      res.send(result);
+    })
+
+
 
 
 
@@ -253,19 +262,6 @@ app.patch('/classes/deny/:id', async (req, res)=>{
 
 
 
- //instructor api
- app.patch('/users/instructor/:id', async(req, res) =>{
-  const id = req.params.id
-  const filter = {_id: new ObjectId(id)}
-  const updateDoc = {
-    $set: {
-      role: 'instructor'
-    },
-  }
-  const result = await usersCollection.updateOne(filter, updateDoc)
-  res.send(result)
-})
-   
 
 
    //add a class
@@ -305,6 +301,98 @@ app.patch('/classes/deny/:id', async (req, res)=>{
     const deletedResult = await MySelectedClassCollection.deleteOne(query)
     res.send({insertedResult,  deletedResult})
   })
+
+
+  //get enroll Class
+  app.get("/enrolledClasses", async (req, res) => {
+    const result = await paymentClassCollection.find().toArray();
+    res.send(result);
+  });
+
+
+   //enroll history
+   app.get("/paymentHistory", async (req, res) => {
+    const result = await paymentClassCollection.find().toArray();
+    res.send(result);
+  });
+
+
+  app.get('/payment/count', async (req, res) => {
+    const result = await paymentClassCollection.aggregate([
+      {
+        $lookup: {
+          from: 'classes',
+          localField: 'enrollClassId',
+          foreignField: '_id',
+          as: 'classInfo'
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          count: { $sum: 1 }
+        }
+      }
+    ]).toArray();
+    const count = result.length > 0 ? result[0].count : 0;
+    const response = [{ id: 1, count }]; // Assuming the id value is 1
+    res.send(JSON.stringify(response));
+  
+});
+
+
+
+app.get('/payment/highest-enrollment', async (req, res) => {
+  const result = await paymentClassCollection.aggregate([
+    {
+      $lookup: {
+        from: 'classes',
+        localField: 'enrollClassId',
+        foreignField: '_id',
+        as: 'classInfo'
+      }
+    },
+    {
+      $group: {
+        _id: '$enrollClassId',
+        count: { $sum: 1 },
+        data: { $push: '$$ROOT' }
+      }
+    },
+    {
+      $sort: { count: -1 }
+    },
+    {
+      $limit: 1
+    },
+    {
+      $unwind: '$data'
+    },
+    {
+      $replaceRoot: { newRoot: '$data' }
+    },
+    {
+      $lookup: {
+        from: 'classes',
+        localField: 'enrollClassId',
+        foreignField: '_id',
+        as: 'classDetails'
+      }
+    },
+    {
+      $unwind: '$classDetails'
+    },
+    {
+      $project: {
+        _id: '$classDetails._id',
+        className: '$classDetails.name',
+        enrollClassId: 1
+      }
+    }
+  ]).toArray();
+
+  res.send(result);
+});
 
 
     // Send a ping to confirm a successful connection
