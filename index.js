@@ -51,6 +51,7 @@ async function run() {
    const classCollection = client.db("picStudio").collection("classes")
    const MySelectedClassCollection = client.db("picStudio").collection("selectedClass")
    const paymentClassCollection = client.db("picStudio").collection("payment")
+   const popularClassCollection = client.db("picStudio").collection("popularClass")
 
 
 
@@ -149,6 +150,13 @@ app.get('/users',verifyJWT, verifyAdmin, async(req, res) =>{
         .toArray();
       res.send(result);
     });
+      //popular class
+      app.get("/popularClass", async (req, res) => {
+        const result = await popularClassCollection
+          .find()
+          .toArray();
+        res.send(result);
+      });
 
 
     //admin api
